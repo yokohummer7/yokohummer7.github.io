@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Yokohama Kaidashi Kikou</title>
+    <description>Sharing thoughts on the various topics.
+</description>
+    <link>http://yokohummer7.github.io/blog/</link>
+    <atom:link href="http://yokohummer7.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Wed, 02 Sep 2015 03:51:09 +0900</pubDate>
+    <lastBuildDate>Wed, 02 Sep 2015 03:51:09 +0900</lastBuildDate>
+    <generator>Jekyll v2.5.3</generator>
+    
+      <item>
+        <title>Performance regression with Go 1.5</title>
+        <description>&lt;p&gt;Recently, I saw an article on Reddit that claims &lt;a href=&quot;https://www.reddit.com/r/programming/comments/3ixlys/the_benchmark_game_has_been_updated_to_go_15/&quot;&gt;“the Benchmark Game has been updated to Go 1.5. Other than regex and binary trees, we’re equal to or faster than Java across the board”&lt;/a&gt;. That was quite surprising, because AFAICT, Go 1.5’s major improvement was reducing garbage collection &lt;em&gt;latency&lt;/em&gt;. However, what the Benchmarks Game measures is &lt;em&gt;throughput&lt;/em&gt;. In fact, as a consequence of the latency decrease, the GC of Go 1.5 now has to run more frequently, which leads to &lt;em&gt;worse throughput&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;So I looked up the raw data on the Benchmarks Game repository. As I expected, Go 1.5 didn’t improve much as compared to Go 1.4. Actually, quite the reverse:&lt;/p&gt;
+
+&lt;p&gt;These are the test programs that became faster:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;pidigits#4: 4.181 -&amp;gt; 3.431 (121.9%)
+pidigits#2: 4.062 -&amp;gt; 3.36 (120.9%)
+regexdna#1: 146.019 -&amp;gt; 122.856 (118.9%)
+knucleotide#2: 142.783 -&amp;gt; 129.833 (110.0%)
+knucleotide#1: 195.44 -&amp;gt; 184.772 (105.8%)
+nbody#1: 22.93 -&amp;gt; 22.012 (104.2%)
+knucleotide#5: 73.773 -&amp;gt; 71.183 (103.6%)
+knucleotide#3: 30.77 -&amp;gt; 30.065 (102.3%)
+fasta#1: 7.31 -&amp;gt; 7.183 (101.8%)
+chameneosredux#5: 7.291 -&amp;gt; 7.176 (101.6%)
+fasta#3: 6.161 -&amp;gt; 6.088 (101.2%)
+mandelbrot#2: 42.349 -&amp;gt; 42.001 (100.8%)
+fannkuchredux#1: 65.293 -&amp;gt; 65.189 (100.2%)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Whereas, these are the ones that got slower:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;binarytrees#7: 92.786 -&amp;gt; 231.719 (249.7%)
+binarytrees#9: 92.24 -&amp;gt; 216.512 (234.7%)
+binarytrees#1: 91.063 -&amp;gt; 210.57 (231.2%)
+binarytrees#2: 89.12 -&amp;gt; 193.312 (216.9%)
+binarytrees#4: 89.044 -&amp;gt; 183.231 (205.8%)
+binarytrees#5: 94.408 -&amp;gt; 161.13 (170.7%)
+revcomp#1: 0.795 -&amp;gt; 0.883 (111.1%)
+threadring#5: 14.673 -&amp;gt; 15.93 (108.6%)
+mandelbrot#1: 51.993 -&amp;gt; 54.924 (105.6%)
+binarytrees#6: 16.478 -&amp;gt; 17.355 (105.3%)
+fastaredux#2: 1.745 -&amp;gt; 1.827 (104.7%)
+fastaredux#3: 1.745 -&amp;gt; 1.827 (104.7%)
+binarytrees#8: 55.351 -&amp;gt; 57.354 (103.6%)
+fasta#2: 6.223 -&amp;gt; 6.314 (101.5%)
+revcomp#3: 1.139 -&amp;gt; 1.152 (101.1%)
+regexdna#8: 86.655 -&amp;gt; 87.403 (100.9%)
+revcomp#2: 1.107 -&amp;gt; 1.116 (100.8%)
+meteor#1: 0.126 -&amp;gt; 0.127 (100.8%)
+regexdna#2: 48.113 -&amp;gt; 48.483 (100.8%)
+mandelbrot#6: 47.184 -&amp;gt; 47.505 (100.7%)
+regexdna#7: 87.079 -&amp;gt; 87.353 (100.3%)
+mandelbrot#3: 25.507 -&amp;gt; 25.568 (100.2%)
+spectralnorm#3: 15.705 -&amp;gt; 15.709 (100.0%)
+spectralnorm#1: 15.7 -&amp;gt; 15.703 (100.0%)
+spectralnorm#2: 15.703 -&amp;gt; 15.705 (100.0%)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As you can see, the binary tree benchmarks got signifcantly slower. This is probably because they are the ones that allocate most; the changes of GC will directly impact them.&lt;/p&gt;
+
+&lt;p&gt;It is also interesting that the performance of the pi digits benchmarks is improved to a degree. By looking at the code, they all use the &lt;code&gt;math/big&lt;/code&gt; package. So I believe there were some improvements to Go’s bignum library.&lt;/p&gt;
+
+&lt;p&gt;The results above were from the 64-bit single-core system. For the 64-bit quad-core system, the results are as follow:&lt;/p&gt;
+
+&lt;p&gt;Faster:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;regexdna#1: 48.962 -&amp;gt; 41.622 (117.6%)
+knucleotide#2: 46.265 -&amp;gt; 40.16 (115.2%)
+knucleotide#1: 60.999 -&amp;gt; 55.386 (110.1%)
+nbody#1: 22.919 -&amp;gt; 22.006 (104.1%)
+knucleotide#5: 27.521 -&amp;gt; 26.558 (103.6%)
+knucleotide#3: 8.298 -&amp;gt; 8.141 (101.9%)
+fasta#1: 7.307 -&amp;gt; 7.18 (101.8%)
+spectralnorm#2: 4.149 -&amp;gt; 4.102 (101.1%)
+fannkuchredux#1: 16.464 -&amp;gt; 16.379 (100.5%)
+spectralnorm#3: 3.963 -&amp;gt; 3.954 (100.2%)
+fasta#2: 3.058 -&amp;gt; 3.056 (100.1%)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Slower:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;threadring#5: 14.658 -&amp;gt; 62.868 (428.9%)
+binarytrees#2: 28.131 -&amp;gt; 62.155 (220.9%)
+binarytrees#4: 28.494 -&amp;gt; 60.204 (211.3%)
+mandelbrot#1: 13.037 -&amp;gt; 27.453 (210.6%)
+binarytrees#5: 29.258 -&amp;gt; 59.782 (204.3%)
+fasta#3: 1.798 -&amp;gt; 2.327 (129.4%)
+chameneosredux#5: 7.349 -&amp;gt; 9.484 (129.1%)
+binarytrees#6: 9.438 -&amp;gt; 11.332 (120.1%)
+revcomp#1: 0.755 -&amp;gt; 0.837 (110.9%)
+binarytrees#8: 18.901 -&amp;gt; 20.125 (106.5%)
+binarytrees#7: 93.145 -&amp;gt; 97.377 (104.5%)
+fastaredux#2: 1.745 -&amp;gt; 1.824 (104.5%)
+fastaredux#3: 1.747 -&amp;gt; 1.824 (104.4%)
+binarytrees#1: 91.021 -&amp;gt; 94.746 (104.1%)
+pidigits#2: 3.772 -&amp;gt; 3.889 (103.1%)
+regexdna#2: 16.642 -&amp;gt; 16.969 (102.0%)
+pidigits#4: 3.866 -&amp;gt; 3.921 (101.4%)
+revcomp#3: 1.137 -&amp;gt; 1.153 (101.4%)
+mandelbrot#2: 10.408 -&amp;gt; 10.545 (101.3%)
+regexdna#8: 26.323 -&amp;gt; 26.655 (101.3%)
+revcomp#2: 1.107 -&amp;gt; 1.116 (100.8%)
+meteor#1: 0.126 -&amp;gt; 0.127 (100.8%)
+binarytrees#9: 91.957 -&amp;gt; 92.604 (100.7%)
+mandelbrot#3: 6.413 -&amp;gt; 6.443 (100.5%)
+mandelbrot#6: 11.819 -&amp;gt; 11.837 (100.2%)
+regexdna#7: 86.345 -&amp;gt; 86.37 (100.0%)
+spectralnorm#1: 15.694 -&amp;gt; 15.695 (100.0%)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As you can see, the results aren’t much different. But there’s one thing that’s intriguing: the thread-ring benchmark got regressed significantly. What it does is “pass a token between one thread and the next thread at least N times”, so I guess the new GC is not doing optimally in the concurrent execution.&lt;/p&gt;
+
+&lt;p&gt;Anyways, what’s the point? Does this mean the GC improvements of Go 1.5 suck?&lt;/p&gt;
+
+&lt;p&gt;No, it’s all about trade-offs. High latency is typically more annoying than low throughput, so the Go team made a choice. However, as a result, there can be regressions in some use cases. The Benchmarks Game is likely the latter. Actually, Java’s new GC engine, called “G1”, also made a similar choice: they emphasized on latency and as a result throughput was a bit reduced. I have no idea about the academic theory behind garbage collection, but this seems to be an inherent problem residing in it.&lt;/p&gt;
+
+</description>
+        <pubDate>Tue, 01 Sep 2015 12:15:33 +0900</pubDate>
+        <link>http://yokohummer7.github.io/blog/2015/09/01/go-1.5-regression.html</link>
+        <guid isPermaLink="true">http://yokohummer7.github.io/blog/2015/09/01/go-1.5-regression.html</guid>
+        
+        
+      </item>
+    
+  </channel>
+</rss>
