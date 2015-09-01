@@ -6,12 +6,12 @@
 </description>
     <link>http://yokohummer7.github.io/blog/</link>
     <atom:link href="http://yokohummer7.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 02 Sep 2015 03:51:09 +0900</pubDate>
-    <lastBuildDate>Wed, 02 Sep 2015 03:51:09 +0900</lastBuildDate>
+    <pubDate>Wed, 02 Sep 2015 03:54:05 +0900</pubDate>
+    <lastBuildDate>Wed, 02 Sep 2015 03:54:05 +0900</lastBuildDate>
     <generator>Jekyll v2.5.3</generator>
     
       <item>
-        <title>Performance regression with Go 1.5</title>
+        <title>Go 1.5 got slower in the Benchmarks Game</title>
         <description>&lt;p&gt;Recently, I saw an article on Reddit that claims &lt;a href=&quot;https://www.reddit.com/r/programming/comments/3ixlys/the_benchmark_game_has_been_updated_to_go_15/&quot;&gt;“the Benchmark Game has been updated to Go 1.5. Other than regex and binary trees, we’re equal to or faster than Java across the board”&lt;/a&gt;. That was quite surprising, because AFAICT, Go 1.5’s major improvement was reducing garbage collection &lt;em&gt;latency&lt;/em&gt;. However, what the Benchmarks Game measures is &lt;em&gt;throughput&lt;/em&gt;. In fact, as a consequence of the latency decrease, the GC of Go 1.5 now has to run more frequently, which leads to &lt;em&gt;worse throughput&lt;/em&gt;.&lt;/p&gt;
 
 &lt;p&gt;So I looked up the raw data on the Benchmarks Game repository. As I expected, Go 1.5 didn’t improve much as compared to Go 1.4. Actually, quite the reverse:&lt;/p&gt;
@@ -122,8 +122,8 @@ spectralnorm#1: 15.694 -&amp;gt; 15.695 (100.0%)
 
 </description>
         <pubDate>Tue, 01 Sep 2015 12:15:33 +0900</pubDate>
-        <link>http://yokohummer7.github.io/blog/2015/09/01/go-1.5-regression.html</link>
-        <guid isPermaLink="true">http://yokohummer7.github.io/blog/2015/09/01/go-1.5-regression.html</guid>
+        <link>http://yokohummer7.github.io/blog/2015/09/01/go-1.5-benchmarks-game.html</link>
+        <guid isPermaLink="true">http://yokohummer7.github.io/blog/2015/09/01/go-1.5-benchmarks-game.html</guid>
         
         
       </item>
